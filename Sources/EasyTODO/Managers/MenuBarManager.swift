@@ -11,6 +11,7 @@ final class MenuBarManager: NSObject {
     private var popover: NSPopover?
     private var refreshTimer: Timer?
     private var defaultsObserver: NSObjectProtocol?
+    private var launchObserver: NSObjectProtocol?
     private var pendingSingleClick: DispatchWorkItem?
 
     private override init() {
@@ -58,6 +59,14 @@ final class MenuBarManager: NSObject {
             return
         }
 
+        // Creating a status item before the app finishes launching aborts on
+        // macOS 15+ (SkyLight asserts: no window-server connection yet), and
+        // configure(modelContainer:) runs in EasyTODOApp.init(), before that.
+        guard NSRunningApplication.current.isFinishedLaunching else {
+            installStatusItemWhenFinishedLaunching()
+            return
+        }
+
         let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.statusItem = statusItem
 
@@ -70,6 +79,25 @@ final class MenuBarManager: NSObject {
 
         refreshStatusTitle()
         startRefreshTimer()
+    }
+
+    private func installStatusItemWhenFinishedLaunching() {
+        guard launchObserver == nil else { return }
+
+        launchObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didFinishLaunchingNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                if let launchObserver = self.launchObserver {
+                    NotificationCenter.default.removeObserver(launchObserver)
+                    self.launchObserver = nil
+                }
+                self.syncVisibility()
+            }
+        }
     }
 
     private func removeStatusItem() {
