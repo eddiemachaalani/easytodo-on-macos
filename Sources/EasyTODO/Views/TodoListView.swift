@@ -21,6 +21,7 @@ struct TodoListView: View {
     @State private var deletedTaskToRestore: DeletedTaskSnapshot?
     @State private var undoKeyMonitor: Any?
     @State private var fireworksTrigger = 0
+    @State private var isWindowHovered = false
 
     private let calendar = Calendar.current
     private let dayRefreshTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -54,6 +55,8 @@ struct TodoListView: View {
             noteSurface
 
             VStack(spacing: 0) {
+                windowControls
+
                 header
 
                 Divider()
@@ -108,6 +111,9 @@ struct TodoListView: View {
         }
         .frame(minWidth: 280, idealWidth: 340, minHeight: 320, idealHeight: 480)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onHover { hovering in
+            isWindowHovered = hovering
+        }
         .contextMenu {
             Button {
                 WindowManager.shared.closeMainWindow()
@@ -249,6 +255,19 @@ struct TodoListView: View {
         .onTapGesture(count: 2, perform: switchToWidget)
     }
 
+    private var windowControls: some View {
+        HStack {
+            NoteWindowControls()
+
+            Spacer()
+        }
+        .padding(.leading, 10)
+        .padding(.top, 8)
+        .opacity(isWindowHovered ? 1 : 0)
+        .allowsHitTesting(isWindowHovered)
+        .animation(.easeInOut(duration: 0.15), value: isWindowHovered)
+    }
+
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             Button {
@@ -292,7 +311,7 @@ struct TodoListView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .padding(.top, 6)
         .padding(.bottom, 12)
     }
 
