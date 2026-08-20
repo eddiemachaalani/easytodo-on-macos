@@ -36,6 +36,14 @@ struct MenuBarTodoView: View {
         return "Today · \(name)"
     }
 
+    private func categoryPickerButton(title: String, id: String) -> some View {
+        Button {
+            selectedCategoryID = id
+        } label: {
+            Label(title, systemImage: selectedCategoryID == id ? "checkmark.circle.fill" : "circle")
+        }
+    }
+
     private var completedCount: Int {
         todayTasks.filter(\.isCompleted).count
     }
@@ -47,9 +55,27 @@ struct MenuBarTodoView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(headerTitle)
-                    .font(.headline)
-                    .lineLimit(1)
+                Menu {
+                    categoryPickerButton(title: "All", id: CategoryFilter.allCategoriesID)
+
+                    ForEach(categories) { category in
+                        categoryPickerButton(title: category.name, id: category.id.uuidString)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(headerTitle)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .accessibilityLabel("Switch category")
 
                 Spacer()
 
