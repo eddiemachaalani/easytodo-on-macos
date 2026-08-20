@@ -29,6 +29,22 @@ enum TaskListOrdering {
         renumber(activeTasks + [task] + completedTasks)
     }
 
+    static func moveTask(_ task: TodoTask, by offset: Int, in tasks: [TodoTask]) {
+        var reorderedTasks = ordered(tasks)
+        guard let index = reorderedTasks.firstIndex(where: { $0 === task }) else { return }
+
+        let target = index + offset
+        guard target >= 0, target < reorderedTasks.count,
+              reorderedTasks[target].isCompleted == task.isCompleted else { return }
+
+        reorderedTasks.swapAt(index, target)
+
+        let activeTasks = reorderedTasks.filter { !$0.isCompleted }
+        let completedTasks = reorderedTasks.filter(\.isCompleted)
+
+        renumber(activeTasks + completedTasks)
+    }
+
     static func moveTasks(from source: IndexSet, to destination: Int, in tasks: [TodoTask]) {
         var reorderedTasks = ordered(tasks)
         reorderedTasks.move(fromOffsets: source, toOffset: destination)

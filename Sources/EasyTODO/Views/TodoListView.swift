@@ -115,6 +115,9 @@ struct TodoListView: View {
                                 delete(task)
                             }
                         }
+                        .contextMenu {
+                            taskContextMenuItems(for: task)
+                        }
                         .listRowInsets(EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 10))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
@@ -133,57 +136,7 @@ struct TodoListView: View {
             isWindowHovered = hovering
         }
         .contextMenu {
-            Button {
-                WindowManager.shared.closeMainWindow()
-            } label: {
-                Label("Close Window", systemImage: "xmark")
-            }
-
-            Button {
-                WindowManager.shared.minimizeMainWindow()
-            } label: {
-                Label("Minimize Window", systemImage: "minus")
-            }
-
-            Button {
-                WindowManager.shared.zoomMainWindow()
-            } label: {
-                Label("Zoom Window", systemImage: "arrow.up.left.and.arrow.down.right")
-            }
-
-            Button {
-                WidgetWindowManager.shared.showWidget()
-                WindowManager.shared.closeMainWindow()
-            } label: {
-                Label("Change to Widget", systemImage: "rectangle.on.rectangle")
-            }
-
-            Divider()
-
-            Button {
-                alwaysOnTop.toggle()
-                WindowManager.shared.applyWindowSettings()
-            } label: {
-                Label("Always on Top", systemImage: alwaysOnTop ? "checkmark.circle.fill" : "circle")
-            }
-
-            Menu {
-                transparencyMenuButton(title: "100%", value: 1.0)
-                transparencyMenuButton(title: "80%", value: 0.80)
-                transparencyMenuButton(title: "50%", value: 0.50)
-            } label: {
-                Label("Transparency: \(transparencyTitle)", systemImage: "slider.horizontal.3")
-            }
-
-            if deletedTaskToRestore != nil {
-                Divider()
-
-                Button {
-                    undoLastDeletedTask()
-                } label: {
-                    Label("Undo Delete", systemImage: "arrow.uturn.backward")
-                }
-            }
+            windowContextMenuItems
         }
         .alert("New Category", isPresented: $isNewCategoryPresented) {
             TextField("Name", text: $categoryNameDraft)
@@ -445,6 +398,85 @@ struct TodoListView: View {
         .padding(.horizontal, 16)
         .padding(.top, 6)
         .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private var windowContextMenuItems: some View {
+        Button {
+            WindowManager.shared.closeMainWindow()
+        } label: {
+            Label("Close Window", systemImage: "xmark")
+        }
+
+        Button {
+            WindowManager.shared.minimizeMainWindow()
+        } label: {
+            Label("Minimize Window", systemImage: "minus")
+        }
+
+        Button {
+            WindowManager.shared.zoomMainWindow()
+        } label: {
+            Label("Zoom Window", systemImage: "arrow.up.left.and.arrow.down.right")
+        }
+
+        Button {
+            WidgetWindowManager.shared.showWidget()
+            WindowManager.shared.closeMainWindow()
+        } label: {
+            Label("Change to Widget", systemImage: "rectangle.on.rectangle")
+        }
+
+        Divider()
+
+        Button {
+            alwaysOnTop.toggle()
+            WindowManager.shared.applyWindowSettings()
+        } label: {
+            Label("Always on Top", systemImage: alwaysOnTop ? "checkmark.circle.fill" : "circle")
+        }
+
+        Menu {
+            transparencyMenuButton(title: "100%", value: 1.0)
+            transparencyMenuButton(title: "80%", value: 0.80)
+            transparencyMenuButton(title: "50%", value: 0.50)
+        } label: {
+            Label("Transparency: \(transparencyTitle)", systemImage: "slider.horizontal.3")
+        }
+
+        if deletedTaskToRestore != nil {
+            Divider()
+
+            Button {
+                undoLastDeletedTask()
+            } label: {
+                Label("Undo Delete", systemImage: "arrow.uturn.backward")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func taskContextMenuItems(for task: TodoTask) -> some View {
+        Button {
+            moveTask(task, by: -1)
+        } label: {
+            Label("Move Up", systemImage: "arrow.up")
+        }
+
+        Button {
+            moveTask(task, by: 1)
+        } label: {
+            Label("Move Down", systemImage: "arrow.down")
+        }
+
+        Divider()
+
+        windowContextMenuItems
+    }
+
+    private func moveTask(_ task: TodoTask, by offset: Int) {
+        TaskListOrdering.moveTask(task, by: offset, in: tasksScheduled(on: task.scheduledDay(in: calendar)))
+        saveChanges()
     }
 
     private func showHeaderQuickAdd() {

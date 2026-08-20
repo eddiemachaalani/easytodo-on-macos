@@ -205,6 +205,31 @@ final class EasyTODOTests: XCTestCase {
         XCTAssertTrue(futureTask.isScheduled(on: tomorrow, calendar: calendar))
     }
 
+    func testMoveTaskByOffsetSwapsWithNeighbor() {
+        let first = TodoTask(title: "First", sortOrder: 0)
+        let second = TodoTask(title: "Second", sortOrder: 1)
+        let third = TodoTask(title: "Third", sortOrder: 2)
+        let tasks = [first, second, third]
+
+        TaskListOrdering.moveTask(third, by: -1, in: tasks)
+
+        XCTAssertEqual(TaskListOrdering.ordered(tasks).map(\.title), ["First", "Third", "Second"])
+
+        TaskListOrdering.moveTask(first, by: -1, in: tasks)
+
+        XCTAssertEqual(TaskListOrdering.ordered(tasks).map(\.title), ["First", "Third", "Second"])
+    }
+
+    func testMoveTaskByOffsetStaysWithinCompletionGroup() {
+        let active = TodoTask(title: "Active", sortOrder: 0)
+        let done = TodoTask(title: "Done", isCompleted: true, sortOrder: 1)
+        let tasks = [active, done]
+
+        TaskListOrdering.moveTask(done, by: -1, in: tasks)
+
+        XCTAssertEqual(TaskListOrdering.ordered(tasks).map(\.title), ["Active", "Done"])
+    }
+
     func testCategoryFilterMatchesAllAndSpecificCategory() throws {
         let container = try PersistenceController.modelContainer(inMemory: true)
         let context = container.mainContext

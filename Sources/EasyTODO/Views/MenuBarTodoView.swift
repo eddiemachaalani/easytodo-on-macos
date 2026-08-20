@@ -106,14 +106,31 @@ struct MenuBarTodoView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                ScrollView(.vertical) {
-                    LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(orderedTasks) { task in
-                            menuTaskRow(task)
-                        }
+                List {
+                    ForEach(orderedTasks) { task in
+                        menuTaskRow(task)
+                            .contextMenu {
+                                Button {
+                                    moveTask(task, by: -1)
+                                } label: {
+                                    Label("Move Up", systemImage: "arrow.up")
+                                }
+
+                                Button {
+                                    moveTask(task, by: 1)
+                                } label: {
+                                    Label("Move Down", systemImage: "arrow.down")
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 3, leading: 0, bottom: 3, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                     }
-                    .padding(.trailing, 2)
+                    .onMove(perform: moveTasks)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .environment(\.defaultMinListRowHeight, 24)
                 .frame(height: taskListHeight)
                 .scrollIndicators(.automatic)
             }
@@ -190,6 +207,11 @@ struct MenuBarTodoView: View {
 
     private func menuTaskRow(_ task: TodoTask) -> some View {
         HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .frame(width: 12)
+
             Button {
                 toggleCompletion(for: task)
             } label: {
@@ -251,6 +273,16 @@ struct MenuBarTodoView: View {
         if !wasCompleted && task.isCompleted {
             CompletionFeedbackPlayer.playTaskCompletedSound()
         }
+    }
+
+    private func moveTasks(from source: IndexSet, to destination: Int) {
+        TaskListOrdering.moveTasks(from: source, to: destination, in: todayTasks)
+        saveChanges()
+    }
+
+    private func moveTask(_ task: TodoTask, by offset: Int) {
+        TaskListOrdering.moveTask(task, by: offset, in: todayTasks)
+        saveChanges()
     }
 
     private func requestDelete(_ task: TodoTask) {
