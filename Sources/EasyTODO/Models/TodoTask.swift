@@ -9,6 +9,7 @@ final class TodoTask {
     var createdAt: Date
     var scheduledDate: Date?
     var priorityRawValue: String?
+    var category: TaskCategory?
 
     init(
         title: String,
@@ -16,7 +17,8 @@ final class TodoTask {
         sortOrder: Int = 0,
         createdAt: Date = .now,
         scheduledDate: Date = .now,
-        priority: TaskPriority = .notUrgentImportant
+        priority: TaskPriority = .notUrgentImportant,
+        category: TaskCategory? = nil
     ) {
         self.title = title
         self.isCompleted = isCompleted
@@ -24,6 +26,7 @@ final class TodoTask {
         self.createdAt = createdAt
         self.scheduledDate = Calendar.current.startOfDay(for: scheduledDate)
         self.priorityRawValue = priority.rawValue
+        self.category = category
     }
 
     var priority: TaskPriority {

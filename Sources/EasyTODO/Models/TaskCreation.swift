@@ -7,7 +7,8 @@ enum TaskCreation {
         title: String,
         scheduledDate: Date = .now,
         in context: ModelContext,
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        category: TaskCategory? = nil
     ) throws -> TodoTask? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return nil }
@@ -17,7 +18,7 @@ enum TaskCreation {
             task.isScheduled(on: scheduledDate, calendar: calendar)
         }
         let nextSortOrder = (dayTasks.map(\.sortOrder).max() ?? -1) + 1
-        let task = TodoTask(title: trimmedTitle, sortOrder: nextSortOrder, scheduledDate: scheduledDate)
+        let task = TodoTask(title: trimmedTitle, sortOrder: nextSortOrder, scheduledDate: scheduledDate, category: category)
 
         context.insert(task)
         try context.save()

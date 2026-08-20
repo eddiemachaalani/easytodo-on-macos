@@ -206,8 +206,9 @@ final class MenuBarManager: NSObject {
             let context = modelContainer.mainContext
             _ = try TaskDayMaintenance.rolloverUnfinishedTasksToToday(in: context)
             let tasks = try context.fetch(FetchDescriptor<TodoTask>())
+            let selectedCategoryID = UserDefaults.standard.string(forKey: EasyTODOSettings.selectedCategoryID) ?? ""
             let todayTasks = tasks.filter { task in
-                task.isScheduled(on: .now)
+                task.isScheduled(on: .now) && CategoryFilter.matches(task, selectedCategoryID: selectedCategoryID)
             }
             let completedCount = todayTasks.filter(\.isCompleted).count
             button.title = "\(completedCount) / \(todayTasks.count)"

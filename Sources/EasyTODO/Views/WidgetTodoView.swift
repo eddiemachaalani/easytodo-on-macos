@@ -10,6 +10,11 @@ struct WidgetTodoView: View {
     ]) private var tasks: [TodoTask]
 
     @AppStorage(EasyTODOSettings.theme) private var theme = ThemeOption.light.rawValue
+    @AppStorage(EasyTODOSettings.selectedCategoryID) private var selectedCategoryID = ""
+
+    @Query(sort: [
+        SortDescriptor(\TaskCategory.name)
+    ]) private var categories: [TaskCategory]
 
     private let calendar = Calendar.current
     private let dayRefreshTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -17,7 +22,16 @@ struct WidgetTodoView: View {
     private var todayTasks: [TodoTask] {
         tasks.filter { task in
             task.isScheduled(on: .now, calendar: calendar)
+                && CategoryFilter.matches(task, selectedCategoryID: selectedCategoryID)
         }
+    }
+
+    private var headerTitle: String {
+        guard let name = categories.first(where: { $0.id.uuidString == selectedCategoryID })?.name else {
+            return "Today's TODOs"
+        }
+
+        return "\(name) · Today"
     }
 
     private var orderedTasks: [TodoTask] {
@@ -86,8 +100,9 @@ struct WidgetTodoView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Today's TODOs")
+                Text(headerTitle)
                     .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
 
                 Text("\(activeCount) active - \(completedCount) done")
                     .font(.system(size: 11, weight: .medium))

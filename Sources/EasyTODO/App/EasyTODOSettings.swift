@@ -7,6 +7,7 @@ enum EasyTODOSettings {
     static let hiddenDockIcon = "hiddenDockIcon"
     static let transparency = "transparency"
     static let theme = "theme"
+    static let selectedCategoryID = "selectedCategoryID"
 
     static func registerDefaults() {
         let defaults = UserDefaults.standard
@@ -16,7 +17,8 @@ enum EasyTODOSettings {
             showMenuBar: true,
             hiddenDockIcon: false,
             transparency: 0.80,
-            theme: ThemeOption.light.rawValue
+            theme: ThemeOption.light.rawValue,
+            selectedCategoryID: ""
         ])
 
         if abs(defaults.double(forKey: transparency) - 0.90) < 0.001 {

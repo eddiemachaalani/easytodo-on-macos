@@ -9,6 +9,12 @@ struct MenuBarTodoView: View {
         SortDescriptor(\TodoTask.createdAt)
     ]) private var tasks: [TodoTask]
 
+    @Query(sort: [
+        SortDescriptor(\TaskCategory.name)
+    ]) private var categories: [TaskCategory]
+
+    @AppStorage(EasyTODOSettings.selectedCategoryID) private var selectedCategoryID = ""
+
     @State private var isQuickAddPresented = false
     @State private var taskPendingDeletion: TodoTask?
 
@@ -18,7 +24,16 @@ struct MenuBarTodoView: View {
     private var todayTasks: [TodoTask] {
         tasks.filter { task in
             task.isScheduled(on: .now, calendar: calendar)
+                && CategoryFilter.matches(task, selectedCategoryID: selectedCategoryID)
         }
+    }
+
+    private var headerTitle: String {
+        guard let name = categories.first(where: { $0.id.uuidString == selectedCategoryID })?.name else {
+            return "Today"
+        }
+
+        return "Today · \(name)"
     }
 
     private var completedCount: Int {
@@ -32,8 +47,9 @@ struct MenuBarTodoView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Today")
+                Text(headerTitle)
                     .font(.headline)
+                    .lineLimit(1)
 
                 Spacer()
 
@@ -237,7 +253,12 @@ struct MenuBarTodoView: View {
 
     private func addTask(title: String) -> Bool {
         do {
-            return try TaskCreation.addTask(title: title, in: modelContext, calendar: calendar) != nil
+            return try TaskCreation.addTask(
+                title: title,
+                in: modelContext,
+                calendar: calendar,
+                category: CategoryFilter.selectedCategory(in: modelContext)
+            ) != nil
         } catch {
             assertionFailure("Unable to save menu bar task: \(error)")
             return false

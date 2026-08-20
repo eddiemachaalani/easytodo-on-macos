@@ -204,4 +204,38 @@ final class EasyTODOTests: XCTestCase {
         XCTAssertTrue(todayTask.isScheduled(on: today, calendar: calendar))
         XCTAssertTrue(futureTask.isScheduled(on: tomorrow, calendar: calendar))
     }
+
+    func testCategoryFilterMatchesAllAndSpecificCategory() throws {
+        let container = try PersistenceController.modelContainer(inMemory: true)
+        let context = container.mainContext
+
+        let work = TaskCategory(name: "Work")
+        context.insert(work)
+
+        let workTask = try XCTUnwrap(TaskCreation.addTask(title: "Ship feature", in: context, category: work))
+        let looseTask = try XCTUnwrap(TaskCreation.addTask(title: "Buy milk", in: context))
+
+        XCTAssertTrue(CategoryFilter.matches(workTask, selectedCategoryID: CategoryFilter.allCategoriesID))
+        XCTAssertTrue(CategoryFilter.matches(looseTask, selectedCategoryID: CategoryFilter.allCategoriesID))
+        XCTAssertTrue(CategoryFilter.matches(workTask, selectedCategoryID: work.id.uuidString))
+        XCTAssertFalse(CategoryFilter.matches(looseTask, selectedCategoryID: work.id.uuidString))
+    }
+
+    func testDeletingCategoryKeepsItsTasks() throws {
+        let container = try PersistenceController.modelContainer(inMemory: true)
+        let context = container.mainContext
+
+        let football = TaskCategory(name: "Football")
+        context.insert(football)
+        let task = try XCTUnwrap(TaskCreation.addTask(title: "Book pitch", in: context, category: football))
+
+        context.delete(football)
+        try context.save()
+
+        let remainingTasks = try context.fetch(FetchDescriptor<TodoTask>())
+
+        XCTAssertEqual(remainingTasks.count, 1)
+        XCTAssertNil(task.category)
+        XCTAssertTrue(CategoryFilter.matches(task, selectedCategoryID: CategoryFilter.allCategoriesID))
+    }
 }

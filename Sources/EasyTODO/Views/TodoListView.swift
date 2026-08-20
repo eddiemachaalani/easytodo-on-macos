@@ -10,10 +10,15 @@ struct TodoListView: View {
         SortDescriptor(\TodoTask.createdAt)
     ]) private var tasks: [TodoTask]
 
+    @Query(sort: [
+        SortDescriptor(\TaskCategory.name)
+    ]) private var categories: [TaskCategory]
+
     @AppStorage(EasyTODOSettings.alwaysOnTop) private var alwaysOnTop = true
     @AppStorage(EasyTODOSettings.hiddenDockIcon) private var hiddenDockIcon = false
     @AppStorage(EasyTODOSettings.showMenuBar) private var showMenuBar = true
     @AppStorage(EasyTODOSettings.transparency) private var transparency = 0.80
+    @AppStorage(EasyTODOSettings.selectedCategoryID) private var selectedCategoryID = ""
 
     @State private var selectedDate = Date()
     @State private var isCalendarPresented = false
@@ -22,6 +27,9 @@ struct TodoListView: View {
     @State private var undoKeyMonitor: Any?
     @State private var fireworksTrigger = 0
     @State private var isWindowHovered = false
+    @State private var isNewCategoryPresented = false
+    @State private var isRenameCategoryPresented = false
+    @State private var categoryNameDraft = ""
 
     private let calendar = Calendar.current
     private let dayRefreshTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -40,6 +48,16 @@ struct TodoListView: View {
 
     private var hasActiveAndCompletedTasks: Bool {
         displayedTasks.contains { !$0.isCompleted } && displayedTasks.contains { $0.isCompleted }
+    }
+
+    private var selectedCategory: TaskCategory? {
+        categories.first { $0.id.uuidString == selectedCategoryID }
+    }
+
+    private var categoryTasks: [TodoTask] {
+        tasks.filter { task in
+            CategoryFilter.matches(task, selectedCategoryID: selectedCategoryID)
+        }
     }
 
     private var headerTitle: String {
@@ -167,6 +185,28 @@ struct TodoListView: View {
                 }
             }
         }
+        .alert("New Category", isPresented: $isNewCategoryPresented) {
+            TextField("Name", text: $categoryNameDraft)
+
+            Button("Add", action: createCategory)
+                .keyboardShortcut(.defaultAction)
+
+            Button("Cancel", role: .cancel) {
+                categoryNameDraft = ""
+            }
+        } message: {
+            Text("Tasks added while a category is selected go into that category.")
+        }
+        .alert("Rename Category", isPresented: $isRenameCategoryPresented) {
+            TextField("Name", text: $categoryNameDraft)
+
+            Button("Rename", action: renameSelectedCategory)
+                .keyboardShortcut(.defaultAction)
+
+            Button("Cancel", role: .cancel) {
+                categoryNameDraft = ""
+            }
+        }
         .background(
             WindowAccessor { window in
                 WindowManager.shared.configureMainWindow(window)
@@ -174,7 +214,7 @@ struct TodoListView: View {
         )
         .sheet(isPresented: $isCalendarPresented) {
             CalendarPlannerView(
-                tasks: tasks,
+                tasks: categoryTasks,
                 selectedDate: $selectedDate,
                 onAddTask: { title, date in
                     _ = addTask(title: title, for: date)
@@ -258,14 +298,106 @@ struct TodoListView: View {
     private var windowControls: some View {
         HStack {
             NoteWindowControls()
+                .opacity(isWindowHovered ? 1 : 0)
+                .allowsHitTesting(isWindowHovered)
+                .animation(.easeInOut(duration: 0.15), value: isWindowHovered)
 
             Spacer()
+
+            categoryMenu
         }
         .padding(.leading, 10)
+        .padding(.trailing, 14)
         .padding(.top, 8)
-        .opacity(isWindowHovered ? 1 : 0)
-        .allowsHitTesting(isWindowHovered)
-        .animation(.easeInOut(duration: 0.15), value: isWindowHovered)
+    }
+
+    private var categoryMenu: some View {
+        Menu {
+            categoryPickerButton(title: "All", id: CategoryFilter.allCategoriesID)
+
+            ForEach(categories) { category in
+                categoryPickerButton(title: category.name, id: category.id.uuidString)
+            }
+
+            Divider()
+
+            Button("New Category…") {
+                categoryNameDraft = ""
+                isNewCategoryPresented = true
+            }
+
+            if let selectedCategory {
+                Button("Rename \"\(selectedCategory.name)\"…") {
+                    categoryNameDraft = selectedCategory.name
+                    isRenameCategoryPresented = true
+                }
+
+                Button("Delete \"\(selectedCategory.name)\"", role: .destructive, action: deleteSelectedCategory)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "folder")
+                    .font(.system(size: 9, weight: .semibold))
+
+                Text(selectedCategory?.name ?? "All")
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(.primary.opacity(0.05), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .accessibilityLabel("Switch category")
+    }
+
+    private func categoryPickerButton(title: String, id: String) -> some View {
+        Button {
+            selectedCategoryID = id
+        } label: {
+            Label(title, systemImage: selectedCategoryID == id ? "checkmark.circle.fill" : "circle")
+        }
+    }
+
+    private func createCategory() {
+        let name = categoryNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        categoryNameDraft = ""
+        guard !name.isEmpty else { return }
+
+        if let existing = categories.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+            selectedCategoryID = existing.id.uuidString
+            return
+        }
+
+        let category = TaskCategory(name: name)
+        modelContext.insert(category)
+        saveChanges()
+        selectedCategoryID = category.id.uuidString
+    }
+
+    private func renameSelectedCategory() {
+        guard let selectedCategory else { return }
+
+        let name = categoryNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        categoryNameDraft = ""
+        guard !name.isEmpty else { return }
+
+        selectedCategory.name = name
+        saveChanges()
+    }
+
+    private func deleteSelectedCategory() {
+        guard let selectedCategory else { return }
+
+        modelContext.delete(selectedCategory)
+        selectedCategoryID = CategoryFilter.allCategoriesID
+        saveChanges()
     }
 
     private var header: some View {
@@ -373,7 +505,7 @@ struct TodoListView: View {
     private func undoLastDeletedTask() {
         guard let deletedTaskToRestore else { return }
 
-        let restoredTask = deletedTaskToRestore.task()
+        let restoredTask = deletedTaskToRestore.task(in: modelContext)
         modelContext.insert(restoredTask)
         selectedDate = deletedTaskToRestore.scheduledDate
         self.deletedTaskToRestore = nil
@@ -441,7 +573,7 @@ struct TodoListView: View {
 
     private func addTask(title: String, for date: Date) -> TodoTask? {
         do {
-            let task = try TaskCreation.addTask(title: title, scheduledDate: date, in: modelContext, calendar: calendar)
+            let task = try TaskCreation.addTask(title: title, scheduledDate: date, in: modelContext, calendar: calendar, category: selectedCategory)
 
             return task
         } catch {
@@ -451,7 +583,7 @@ struct TodoListView: View {
     }
 
     private func tasksScheduled(on date: Date) -> [TodoTask] {
-        tasks.filter { task in
+        categoryTasks.filter { task in
             task.isScheduled(on: date, calendar: calendar)
         }
     }
@@ -504,6 +636,7 @@ private struct DeletedTaskSnapshot {
     let createdAt: Date
     let scheduledDate: Date
     let priority: TaskPriority
+    let categoryID: UUID?
 
     init(task: TodoTask, calendar: Calendar) {
         title = task.title
@@ -512,10 +645,12 @@ private struct DeletedTaskSnapshot {
         createdAt = task.createdAt
         scheduledDate = task.scheduledDay(in: calendar)
         priority = task.priority
+        categoryID = task.category?.id
     }
 
-    func task() -> TodoTask {
-        TodoTask(
+    @MainActor
+    func task(in context: ModelContext) -> TodoTask {
+        let task = TodoTask(
             title: title,
             isCompleted: isCompleted,
             sortOrder: sortOrder,
@@ -523,5 +658,11 @@ private struct DeletedTaskSnapshot {
             scheduledDate: scheduledDate,
             priority: priority
         )
+
+        if let categoryID {
+            task.category = CategoryFilter.category(withID: categoryID, in: context)
+        }
+
+        return task
     }
 }

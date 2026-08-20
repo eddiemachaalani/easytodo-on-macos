@@ -81,7 +81,12 @@ final class QuickAddPanelManager {
         guard let modelContainer else { return }
 
         do {
-            _ = try TaskCreation.addTask(title: title, in: modelContainer.mainContext)
+            let context = modelContainer.mainContext
+            _ = try TaskCreation.addTask(
+                title: title,
+                in: context,
+                category: CategoryFilter.selectedCategory(in: context)
+            )
         } catch {
             NSLog("EasyTODO failed to save quick add task: \(error)")
         }
