@@ -29,7 +29,7 @@ struct EasyTODOApp: App {
     }
 
     private var mainWindow: some Scene {
-        WindowGroup("EasyTODO") {
+        Window("EasyTODO", id: WindowManager.mainWindowID) {
             TodoListView()
                 .modelContainer(modelContainer)
                 .preferredColorScheme(preferredColorScheme)

@@ -1,8 +1,13 @@
 import AppKit
+import SwiftUI
 
 @MainActor
 final class WindowManager: ObservableObject {
     static let shared = WindowManager()
+
+    static let mainWindowID = "main"
+
+    var openWindow: OpenWindowAction?
 
     private var mainWindow: NSWindow?
 
@@ -74,6 +79,10 @@ final class WindowManager: ObservableObject {
 
             window.orderFrontRegardless()
             window.makeKeyAndOrderFront(nil)
+        } else {
+            // When macOS restores a launch where the main window was closed,
+            // the window scene is never created — ask SwiftUI to open it.
+            openWindow?(id: Self.mainWindowID)
         }
 
         NSApp.activate(ignoringOtherApps: true)

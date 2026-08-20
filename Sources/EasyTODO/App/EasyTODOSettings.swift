@@ -18,7 +18,10 @@ enum EasyTODOSettings {
             hiddenDockIcon: false,
             transparency: 0.80,
             theme: ThemeOption.light.rawValue,
-            selectedCategoryID: ""
+            selectedCategoryID: "",
+            // Never restore "no windows were open" at launch: the main window
+            // scene would not be created and every show-main-window path no-ops.
+            "NSQuitAlwaysKeepsWindows": false
         ])
 
         if abs(defaults.double(forKey: transparency) - 0.90) < 0.001 {

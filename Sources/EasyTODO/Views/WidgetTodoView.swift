@@ -4,6 +4,7 @@ import SwiftUI
 
 struct WidgetTodoView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query(sort: [
         SortDescriptor(\TodoTask.sortOrder),
         SortDescriptor(\TodoTask.createdAt)
@@ -90,7 +91,10 @@ struct WidgetTodoView: View {
         .onTapGesture(count: 2) {
             WindowManager.shared.showMainWindow()
         }
-        .onAppear(perform: runDailyTaskMaintenance)
+        .onAppear {
+            WindowManager.shared.openWindow = openWindow
+            runDailyTaskMaintenance()
+        }
         .onReceive(dayRefreshTimer) { _ in
             runDailyTaskMaintenance()
         }

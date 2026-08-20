@@ -5,6 +5,7 @@ import SwiftUI
 struct TodoListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openWindow) private var openWindow
     @Query(sort: [
         SortDescriptor(\TodoTask.sortOrder),
         SortDescriptor(\TodoTask.createdAt)
@@ -181,6 +182,7 @@ struct TodoListView: View {
             )
         }
         .onAppear {
+            WindowManager.shared.openWindow = openWindow
             runDailyTaskMaintenance()
             installUndoDeleteKeyboardMonitor()
             WindowManager.shared.applyWindowSettings()
